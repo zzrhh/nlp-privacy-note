@@ -21,21 +21,56 @@
 
 ### 2 相关工作
 
+#### Privacy Attacks against ML
 
+**逆向攻击**首先是被提出在统计学模型上面，随后被应用在深度学习系统上。逆向攻击主要考虑的是模型本身的参数。而我们的攻击，主要是通用模型的词向量。
+
+作为逆向攻击的补充。设计出了**成员推理攻击**对抗机器学习模型。考虑到攻击的目标，成员推理攻击想要解开真正的隐私数据是否在样本数据里。 In terms of the information source, the membership inference attack relies on the probability vector associated with the input sample
+
+#### Privacy Attacks using ML
+
+On biomedical privacy, for example, Humbert et al. leveraged graphical models to infer the genome of an individual from parental relationships and expert knowledge, which was recently extended to other types of biomedical data by . On location privacy, for example, Shokri et al. [64] used Markov chain modeling to reconstruct the actual traces of users from obfuscated location information, while some recent works exploit side channels from social media like hashtags for location inference using clustering or random forests.
+
+### 3 先验知识
+
+#### A. sentence embedding
+
+For the sentence x, the vector z := f(x) is called its embedding.
+
+ For example, the contextualized embedding of the word apple should be different in “I like apple” and “I like Apple macbooks”.
+
+#### B. General-Purpose Language Models for Sentence Embedding
+
+现在的通用语言模型都是堆叠transformer的变体。包含非常多的学习参数。在想使用该模型的时候，模型需要在一个非常大的语料库例如英语维基百科上面预训练。典型的预训练任务MLM，NSP。
 
 ### 4 通用攻击线
 
 #### A. 攻击定义
 
+we formulate the attack model as A : z → s , where z is the embedding of a target sentence x and s denotes certain type of sensitive information that can be obtained from the plaintext with a publicly-known algorithm P : x → s.
+
+For example, in the above head case, P maps any sentence x to {0, 1}: if the sentence x has word head, then P(x) = 1; otherwise P(x) = 0. This notion will be used in formulating our attack pipeline
+
 #### B. 威胁模型
 
 * 假设1，敌手能够访问大量的词向量，而且其中包含敌手感兴趣的敏感信息。
-* 假设2，简单起见，敌手知道预训练的词向量是来自哪种模型。
+* 假设2，简单起见，敌手知道预训练的词向量是来自哪种模型。Later in Section VIII, we show this assumption can be easily removed with a proposed learningbased fingerprinting algorithm
+
 * 假设3，敌手能够访问预训练模型，能够将一句话作为输入然后得到相关的词向量。
 
 #### C. 攻击线
 
 一共划分为4个阶段
+
+Our general attack pipeline is divided into four stages. 
+
+**At the first stage**, the adversary prepares an external corpus。Dext := {xi} N i=1 and uses the algorithm P to extract the {P(xi)} N i=1 as labels。the extracted labels usually contain no truly sensitive information。
+
+**At the second stage**, the adversary queries the pretrained language model with each sentence xi ∈ Dext and receives their embeddings {zi} N i=1.
+
+**At the third stage**, the adversary combines the embeddings with the extracted labels to train an attack model A.
+
+**At the final stage**, the adversary uses the well-trained attack model to infer sensitive information s from the target embedding z.
 
 ##### 1. 第一阶段：准备语料库
 
@@ -43,15 +78,15 @@
 
 ##### 2. 第二阶段：询问语言模型
 
-根据已知模型的信息，敌手能够访问语言模型而且还能保留一些预测信息通过使用在线语言模型服务。At the end of this stage, we have the **training set Dtrain** of the form {(zi ,P(xi))} N i=1, where zi is the embedding corresponding to the sentence xi .
+第二阶段就是将Dext里面的句子转化成对应的词向量。根据已知模型的信息，敌手能够访问语言模型而且还能保留一些预测信息通过使用在线语言模型服务。At the end of this stage, we have the **training set Dtrain** of the form **{(zi ,P(xi))}** N i=1, where zi is the embedding corresponding to the sentence xi .
 
 ##### 3. 第三阶段：训练攻击模型
 
-因为训练集Dtrain从阶段二获取到了。敌手现在能够训练一个攻击模型g用来推理。 In general, the model is designed as a classifier, which takes the embedding zi as its input and outputs a probabilistic vector g(zi) over all possible values of the sensitive information.
+因为训练集Dtrain从阶段二获取到了。敌手现在能够训练一个攻击模型g用来推理。 In general, the model is designed as a **classifier**, which takes the embedding zi as its input and outputs a probabilistic vector g(zi) over all **possible values of the sensitive information**.
 
 ##### 4. 第四阶段：推理
 
-在训练阶段完成后，given the target embedding z, the adversary infers the sensitive information based on the following equation s := A(z) = arg maxi∈{1,2,...,K}[g(z)]i , where [g(z)]i is the value of g(z) at its i-th dimension and K denotes the total number of possible values for s.
+在训练阶段完成后，given the target embedding z, the adversary infers the sensitive information based on the following equation s := A(z) = arg maxi∈{1,2,...,K}[g(z)]i , where [g(z)]i is the value of g(z) at its i-th dimension and K denotes the total number of possible values for s. the adversary considers the value with the highest probability as the most possible value of the sensitive information in the unknown sentence x.
 
 ### 5 模式重构攻击
 
@@ -77,9 +112,11 @@ From the disclosed nucleotide, the adversary can further know the gender, race o
 
 #### B. 方法
 
+we denote the set of all possible values for sequence s as V (s).
+
 ##### 1. 生成外部语料库
 
-知道目标明文的生成规则，敌手可以准备外部语料库经过生成算法。
+知道目标明文的生成规则，敌手可以准备外部语料库经过生成算法。基本的生成算法可以生成大量的训练样本通过随机地从可能的值当中取样V (s).
 
 ##### 2. 攻击模型的结构
 
@@ -103,7 +140,7 @@ From the disclosed nucleotide, the adversary can further know the gender, race o
 
 ##### 2. 不同语言模型之间的比较
 
-Facebook’s RoBERTa shows stronger robustness than other language models in both cases. By investigating its design, we find RoBERTa is a re-implementation of Google’s Bert but uses a different byte-level tokenization scheme (i.e., tokenize sentences in the unit of bytes instead of characters or words) [44]. As RoBERTa shows about 50% lower privacy risks than Bert when facing the same attacks, we conjecture the reason is that the byte-level tokenization scheme may make the embeddings less explicit in character-level sensitive information and thus more robust against our attacks. 语言模型的安全性跟训练数据集的大小无关。
+Facebook’s RoBERTa shows stronger robustness than other language models in both cases. By investigating its design, we find RoBERTa is a re-implementation of Google’s Bert but uses a different byte-level tokenization scheme (i.e., tokenize sentences in the unit of bytes instead of characters or words) [44]. As RoBERTa shows about 50% lower privacy risks than Bert when facing the same attacks, we conjecture the reason is that the **byte-level tokenization scheme may make the embeddings less explicit** in character-level sensitive information and thus more robust against our attacks. 语言模型的安全性跟训练数据集的大小无关。
 
 ##### 3. 其他有趣的发现
 
@@ -113,17 +150,25 @@ Facebook’s RoBERTa shows stronger robustness than other language models in bot
 
  #### A. 攻击的定义
 
+也就是是否关键字K包含在未知的句子x当中。The keyword k can be highly sensitive, which contains indicators for the adversary to further determine e.g., location, residence or illness history of the victim。
+
 we formulate the mapping Pkeyword,k for defining the sensitive information related with keyword k from a sentence x as Pkeyword,k : x → (∃w ∈ x, w == k), where the right side denotes a predicate that yields True if a word w in the sentence x is the target keyword k and otherwise False
+
+不同于模式重构攻击，关键字推理攻击探索关键字是否出现，而不是重构整个序列。
 
 ##### 案例1：航线审阅
 
 航空公司会在某些时候调查他们的顾客来提高服务。得益于NLP技术，大量的航空调查报告以文本格式的能够自动被处理理解顾客的观点。得益于预训练模型来做特征提取。然而，一旦能够访问这些词向量。敌手能够推测出大量的位置相关的敏感信息。我们能够展现出，敌手能够精确的评估是否一个城市的名字包含在该调查报告里面。
+
+利用预先训练好的语言模型进行特征提取，可以进一步提高许多现有资源的利用率，意见挖掘系统。
 
 ##### 案例2：医药处方
 
 The system is expected to take the patient’s description of the illness to predict which department he/she ought to consult. To form a benchmark system, we concatenate the pretrained language models with an additional linear layer for guiding the patients to 10 different departments。
 
 然而，当敌手仅能访问到词向量的时候，他能确确实实地推测出更多敏感和个人的信息关于病人的。
+
+我们想是为了证明一个对手想要精确地确定病毒的确切发病部位通过推断被害人身体相关疾病的发生概率。
 
 #### B. 方法
 
@@ -134,11 +179,17 @@ According to the different levels of the adversary’s knowledge on the plain te
 
 ##### 1. 白盒攻击
 
+Basically, as the adversary has a shadow corpus Dshadow := {(x 0 i )} N i=1 which is sampled from the same distribution as the unknown plain text, he/she can directly use Dshadow as the external corpus Dext and extract the binary label y 0 i = Pkeyword,k(x 0 i ).
 
+接下来，敌手就能使用词向量和标签去训练一个攻击模型。然而，会有一些问题。
+
+**First**, the label set {y 0 i } N i=1 can be highly imbalanced. In other words,有关键字k的句子会非常少相对于这些没有关键字的样本。根据之前的研究，标签的不平衡会导致攻击模型易于过拟合。为了缓解，we propose to randomly replace certain word in the negative samples with the keyword, and we replace the keyword in the positive samples with other random word in the vocabulary (referred to as the word substitution trick). After this operation, the original shadow corpus will be twice enlarged and the samples are balanced in both classes.
+
+**Next**, the shadow corpus after word substitution can still be limited in **size**, i.e., N is small. In this case, we suggest the adversary should implement their attack model with a Support Vector Machine (SVM), which is especially effective for small sample learning [71]. When M is larger than certain threshold (empirically over 103 samples), the adversary can switch to a fully-connected neural network as the attack model, which brings higher attack accuracy.
 
 ##### 2. 黑盒攻击
 
-To implement the keyword inference attack with no prior knowledge, we propose to first crawl sentences from the Internet to form the external corpus and then transfer the adversarial knowledge of an attack model on the external corpus to the target corpus dynamically. Details are as follows.
+To implement the keyword inference attack with no prior knowledge, we propose to first **crawl** sentences from the Internet to form the **external corpus** and then transfer the adversarial knowledge of an attack model on the external corpus to the target corpus dynamically. Details are as follows.
 
 ##### 2.1 创建外部语料库：
 
@@ -146,9 +197,13 @@ With the aid of the Internet, it is relatively convenient for the adversary to o
 
 ##### 2.2 转换敌手的知识：
 
+我们发现，当使用现成的MLP或者线性SVM在这些外部语料库训练后精确度不高。我们发现是领域错位导致的这种现象。
+
+为了验证，第一次，我们训练了一个3层的MLP分类器使用外部语料库，该语料库来自餐馆的点评。next，我们绘图发现，As a result, even though the attack model on the public domain (i.e., on restaurant reviews) achieves a near 100% accuracy, its performance is no better than random guess when applied on the private domain (i.e., on medical descriptions).
+
 The model consists of four sub-modules. First, the module E is an encoder which takes the sentence embedding as input and is expected to output a domain-invariant representation zˆ. The hidden representation is followed by two binary classifiers, i.e. Ckeyword and Cdomain. The keyword classifier Ckeyword takes zˆ as input and predicts whether the sentence x contains the keyword k, while the domain classifier Cdomain outputs whether the embedding comes from X0 or X1。
 
-In our implementations, an additional module called gradient reversal layer [9] is fundamental to learn domain-invariant representations and therefore help transfer the adversarial knowledge
+In our implementations, an additional module called gradient reversal layer [9] is fundamental to learn domain-invariant representations and therefore help transfer the adversarial knowledge。梯度反转层通过放大关键词相关特征和去除领域相关信息来正则化隐藏表示zˆ。
 
 For inference, we take Ckeyword ◦E as the attack model g.
 
@@ -156,8 +211,8 @@ For inference, we take Ckeyword ◦E as the attack model g.
 
 ##### 1. 系统基准
 
-* 航线：我们收集航线审阅数据仅保留包含10个具体城市名字的数据集去构成我们的系统数据
-* 医院：
+* 航线：我们收集航线审阅数据仅，保留包含10个具体城市名字的数据集去构成我们的系统数据
+* 医院：我们假定敌手的关键字集包含10个身体相关的词
 
 ##### 2. 标准
 
@@ -167,6 +222,8 @@ For inference, we take Ckeyword ◦E as the attack model g.
 * 黑盒设置：We study three implementations in the black-box setting, namely linear SVM, 3-layer MLP and the DANN-based attacks. The DANN model has 25 dimensional domain-invariant representations and the coefficient λ in Algorithm 1 is set as 1. We use the Adam optimizer with learning rate 0.001 for both the MLP and the DANN-based attacks. The batch size is set as 64.
 
 #### D. 结果和分析
+
+白盒攻击普遍比黑盒攻击要有效。
 
 ### 7 可能的防御手段
 
